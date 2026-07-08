@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IVR略語暗記アプリ</title>
+
+<style>
+
+*{
+    box-sizing:border-box;
+}
+
+body{
+    margin:0;
+    padding:15px;
+    background:#f2f4f7;
+    font-family:Arial,sans-serif;
+}
+
+.container{
+    max-width:750px;
+    margin:auto;
+}
+
+h1{
+    text-align:center;
+    color:#1565c0;
+}
+
+.controls{
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+    margin-bottom:15px;
+}
+
+select{
+    flex:1;
+    padding:12px;
+    font-size:17px;
+    border-radius:10px;
+}
+
+.card{
+
+    background:white;
+    border-radius:18px;
+    padding:30px;
+    box-shadow:0 4px 12px rgba(0,0,0,.15);
+    text-align:center;
+    min-height:260px;
+
+}
+
+#question{
+
+    font-size:42px;
+    font-weight:bold;
+    margin-top:20px;
+
+}
+
+#answer{
+
+    margin-top:25px;
+    font-size:28px;
+    color:#1565c0;
+    display:none;
+
+}
+
+#choices{
+
+    margin-top:20px;
+
+}
+
+.choice{
+
+    display:block;
+    width:100%;
+    padding:14px;
+    margin-top:10px;
+    font-size:18px;
+    border:none;
+    border-radius:10px;
+    background:#eeeeee;
+    cursor:pointer;
+
+}
+
+.buttons{
+
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+    margin-top:20px;
+
+}
+
+button{
+
+    flex:1;
+    padding:15px;
+    font-size:18px;
+    border:none;
+    border-radius:10px;
+    cursor:pointer;
+
+}
+
+.show{
+    background:#ff9800;
+    color:white;
+}
+
+.next{
+    background:#2196F3;
+    color:white;
+}
+
+.review{
+    background:#9c27b0;
+    color:white;
+}
+
+.reset{
+    background:#4CAF50;
+    color:white;
+}
+
+.stats{
+
+    margin-top:20px;
+    text-align:center;
+    font-size:20px;
+
+}
+
+.progress{
+
+    margin-top:10px;
+    text-align:center;
+    font-size:18px;
+    color:#555;
+
+}
+
+.result{
+
+    margin-top:15px;
+    text-align:center;
+    font-size:22px;
+    font-weight:bold;
+
+}
+
+@media(max-width:600px){
+
+#question{
+    font-size:34px;
+}
+
+#answer{
+    font-size:24px;
+}
+
+button,
+select{
+
+    font-size:16px;
+
+}
+
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+<h1>IVR略語暗記アプリ</h1>
+
+<div class="controls">
+
+<select id="mode">
+<option value="card">暗記カード</option>
+<option value="quiz">四択問題</option>
+</select>
+
+<select id="direction">
+<option value="ej">英 → 日</option>
+<option value="je">日 → 英</option>
+</select>
+
+<select id="category">
+<option value="all">全て</option>
+<option value="心臓">心臓</option>
+<option value="脳">脳</option>
+<option value="肝胆膵">肝胆膵</option>
+<option value="その他">その他</option>
+</select>
+
+</div>
+
+<div class="card">
+
+<div id="question"></div>
+
+<div id="answer"></div>
+
+<div id="choices"></div>
+
+</div>
+
+<div class="buttons">
+
+<button class="show" onclick="showAnswer()">
+答え
+</button>
+
+<button class="next" onclick="nextQuestion()">
+次へ
+</button>
+
+<button class="review" onclick="startReview()">
+間違えだけ
+</button>
+
+<button class="reset" onclick="resetAll()">
+最初から
+</button>
+
+</div>
+
+<div class="stats">
+
+正解：
+<span id="ok">0</span>
+
+　不正解：
+<span id="ng">0</span>
+
+<br><br>
+
+正解率：
+<span id="rate">0</span>%
+
+</div>
+
+<div class="progress">
+
+<span id="progress"></span>
+
+</div>
+
+<div class="result" id="result"></div>
+
+<script>
+
+const cards=[["心臓","IVR","血管内治療"],
+["心臓","CAG","冠動脈造影"],
+["心臓","PCI","経皮的冠動脈形成術"],
+["心臓","PTCA","心臓血管IVR"],
+["心臓","IVUS","超音波"],
+["心臓","OCT","レーザー光"],
+["心臓","POBA","バルーン拡張術"],
+["心臓","PTCRA","ローターブレーター"],
+["心臓","DES","薬剤溶出型ステント"],
+["心臓","AMI","急性心筋梗塞"],
+["心臓","OMI","慢性心筋梗塞"],
+
+["脳","CI","脳梗塞"],
+["脳","DA","内頸動脈造影"],
+["脳","DSA","サブトラクション血管造影"],
+["脳","CAS","頸動脈ステント留置術"],
+["脳","PTA","経皮的血管内形成術"],
+["脳","SAH","くも膜下出血"],
+
+["肝胆膵","HCC","肝細胞癌"],
+["肝胆膵","TACE","経カテーテル的肝動脈化学塞栓術"],
+["肝胆膵","CTAP","動脈性門脈造影下CT"],
+["肝胆膵","CTHA","肝動脈CT"],
+["肝胆膵","TAE","経カテーテル的肝動脈塞栓術"],
+["肝胆膵","TAI","経カテーテル的肝動脈注入化学療法"],
+["肝胆膵","RFA","ラジオ波焼灼術"],
+["肝胆膵","PEIT","経皮的エタノール注入療法"],
+["肝胆膵","DIC","点滴静注胆道造影"],
+["肝胆膵","ERCP","内視鏡的逆行性胆道膵管造影"],
+["肝胆膵","EST","内視鏡的乳頭切開術"],
+["肝胆膵","PTGBD","経皮経肝胆嚢ドレナージ"],
+["肝胆膵","PTC","経皮経肝胆管造影"],
+["肝胆膵","PTCD","経皮経肝胆道ドレナージ"],
+["肝胆膵","ENBD","内視鏡的経鼻胆道ドレナージ"],
+["肝胆膵","ERBD","内視鏡的逆行性胆道ドレナージ"],
+
+["その他","PVP","経皮的椎体形成術"],
+["その他","HSG","子宮卵管造影"],
+["その他","DIP","点滴静注腎盂造影"],
+["その他","RP","逆行性腎盂造影"],
+["その他","CG","膀胱造影"],
+["その他","UCG","尿道膀胱造影"],
+["その他","VCG","排尿時膀胱造影"]
+
+];
+
+const mode=document.getElementById("mode");
+const direction=document.getElementById("direction");
+const category=document.getElementById("category");
+
+const question=document.getElementById("question");
+const answer=document.getElementById("answer");
+const choices=document.getElementById("choices");
+
+const okLabel=document.getElementById("ok");
+const ngLabel=document.getElementById("ng");
+const rateLabel=document.getElementById("rate");
+const progress=document.getElementById("progress");
+const result=document.getElementById("result");
+
+let deck=[];
+let current;
+let currentIndex=0;
+
+let ok=0;
+let ng=0;
+
+let wrong=[];
+
+function shuffle(array){
+
+for(let i=array.length-1;i>0;i--){
+
+const j=Math.floor(Math.random()*(i+1));
+
+[array[i],array[j]]=[array[j],array[i]];
+
+}
+
+return array;
+
+}
+
+function createDeck(){
+
+deck=cards.filter(c=>{
+
+if(category.value==="all") return true;
+
+return c[0]===category.value;
+
+});
+
+shuffle(deck);
+
+currentIndex=0;
+
+}function nextQuestion(){
+
+    result.textContent="";
+    answer.style.display="none";
+    answer.textContent="";
+    choices.innerHTML="";
+
+    // 全問終了
+    if(currentIndex>=deck.length){
+
+        question.textContent="🎉 終了！";
+        answer.style.display="block";
+        answer.textContent="すべての問題が終了しました！";
+        progress.textContent=deck.length+" / "+deck.length;
+
+        return;
+    }
+
+    current=deck[currentIndex];
+    currentIndex++;
+
+    progress.textContent=currentIndex+" / "+deck.length;
+
+    const ej=direction.value==="ej";
+
+    question.textContent=ej?current[1]:current[2];
+
+    if(mode.value==="card"){
+        return;
+    }
+
+    // 四択モード
+    const correct=ej?current[2]:current[1];
+
+    let list=[correct];
+
+    while(list.length<4){
+
+        const r=deck[Math.floor(Math.random()*deck.length)];
+
+        const txt=ej?r[2]:r[1];
+
+        if(!list.includes(txt)){
+            list.push(txt);
+        }
+
+    }
+
+    shuffle(list);
+
+    list.forEach(item=>{
+
+        const btn=document.createElement("button");
+
+        btn.className="choice";
+
+        btn.textContent=item;
+
+        btn.onclick=function(){
+
+            document.querySelectorAll(".choice").forEach(b=>{
+                b.disabled=true;
+            });
+
+            if(item===correct){
+
+                ok++;
+
+                result.textContent="⭕ 正解！";
+
+            }else{
+
+                ng++;
+
+                wrong.push(current);
+
+                result.textContent="❌ 正解は「"+correct+"」";
+
+            }
+
+            okLabel.textContent=ok;
+            ngLabel.textContent=ng;
+
+            const total=ok+ng;
+
+            rateLabel.textContent=
+            Math.round(ok/total*100);
+
+        };
+
+        choices.appendChild(btn);
+
+    });
+
+}function showAnswer(){
+
+    if(mode.value!=="card"){
+        return;
+    }
+
+    answer.style.display="block";
+
+    if(direction.value==="ej"){
+        answer.textContent=current[2];
+    }else{
+        answer.textContent=current[1];
+    }
+
+}
+
+function startReview(){
+
+    if(wrong.length===0){
+
+        alert("間違えた問題はありません。");
+        return;
+
+    }
+
+    deck=[...wrong];
+
+    shuffle(deck);
+
+    wrong=[];
+
+    currentIndex=0;
+
+    result.textContent="復習モード";
+
+    nextQuestion();
+
+}
+
+function resetAll(){
+
+    ok=0;
+    ng=0;
+
+    wrong=[];
+
+    okLabel.textContent=0;
+    ngLabel.textContent=0;
+    rateLabel.textContent=0;
+
+    createDeck();
+
+    nextQuestion();
+
+}
+
+mode.onchange=resetAll;
+direction.onchange=resetAll;
+category.onchange=resetAll;
+
+createDeck();
+
+nextQuestion();
+
+</script>
+
+</body>
+</html>
